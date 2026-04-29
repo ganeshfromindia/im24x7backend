@@ -457,6 +457,7 @@ const loginBiometrics = async (req, res, next) => {
 
 const generatePayLoad = async (req, res, next) => {
   let payloadId;
+  console.log("test");
   try {
     payloadId = crypto.randomUUID();
   } catch (err) {
