@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const HttpError = require("../models/http-error");
 const User = require("../models/user");
 const Manufacturer = require("../models/manufacturer");
-const AppPK = require("../models/apppk");
+const Apppublickey = require("../models/apppublickey");
 const Trader = require("../models/trader");
 const traderDashboard = require("../models/traderDashboard");
 
@@ -378,13 +378,13 @@ const forgotPassword = async (req, res, next) => {
 
 const addPublicKey = async (req, res, next) => {
   const { publicKey, userName } = req.body;
-  const createdAppPK = new AppPK({
-    publickey: publicKey,
-    userName: userName,
+  console.log(publicKey, userName);
+  const createdAppPK = await new Apppublickey({
+    publicKey,
+    userName,
   });
   try {
     await createdAppPK.save();
-    res.status(201).json({ message: "Public key added successfully." });
   } catch (err) {
     const error = new HttpError(
       "Could not add public key, please try again.",
@@ -392,7 +392,7 @@ const addPublicKey = async (req, res, next) => {
     );
     return next(error);
   }
-  return res.status(201).json({
+  res.status(201).json({
     message: "Public key added successfully.",
   });
 };
@@ -408,7 +408,7 @@ const loginBiometrics = async (req, res, next) => {
 
   let storedKey;
   try {
-    storedKey = await AppPK.findOne({ userName: userName });
+    storedKey = await Apppublickey.findOne({ userName: userName });
   } catch (err) {
     const error = new HttpError(
       "Could not retrieve public key, please try again later.",
@@ -421,27 +421,35 @@ const loginBiometrics = async (req, res, next) => {
     return res.status(404).json({ message: "Public key for user not found." });
   }
 
-  let publicKey = storedKey.publickey.trim();
+  console.log("Stored Public Key:", storedKey);
+  let publicKey = storedKey.publicKey.trim();
   if (!publicKey.includes("BEGIN PUBLIC KEY")) {
     publicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
   }
 
-  const verifier = crypto.createVerify("SHA256");
-  verifier.update(
-    typeof payload === "object" ? JSON.stringify(payload) : payload,
-  );
-  verifier.end();
+  const verifier = crypto.createVerify("RSA-SHA256");
+  verifier.update(payload);
+  // const verifier = crypto.createVerify("SHA256");
+  // verifier.update(
+  //   typeof payload === "object" ? JSON.stringify(payload) : payload,
+  // );
+  // verifier.end();
 
   let isVerified = false;
   try {
-    isVerified = verifier.verify(
-      {
-        key: publicKey,
-        format: "pem",
-      },
-      signature,
-      "base64",
-    );
+    // isVerified = verifier.verify(
+    //   {
+    //     key: publicKey,
+    //     format: "pem",
+    //   },
+    //   signature,
+    //   "base64",
+    // );
+    console.log("Public Key for Verification:", publicKey);
+    console.log("Public Key for signature:", signature);
+
+    isVerified = verifier.verify(publicKey, signature, "base64");
+    console.log("Verification result:", isVerified);
   } catch (err) {
     return res.status(401).json({ message: "Invalid signature or payload." });
   }
