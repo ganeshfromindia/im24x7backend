@@ -2,6 +2,7 @@ const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const buffer = require("buffer");
 
 const HttpError = require("../models/http-error");
 const User = require("../models/user");
@@ -399,6 +400,9 @@ const addPublicKey = async (req, res, next) => {
 
 const loginBiometrics = async (req, res, next) => {
   const { signature, payload, userName } = req.body;
+  console.log("payload", payload);
+  console.log("signature", signature);
+  console.log("userName", userName);
 
   if (!signature || !payload || !userName) {
     return res
@@ -427,16 +431,87 @@ const loginBiometrics = async (req, res, next) => {
     publicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
   }
 
-  const verifier = crypto.createVerify("RSA-SHA256");
-  verifier.update(payload);
+  //const verifier = crypto.createVerify("RSA-SHA256");
+  //verifier.update(payload);
   // const verifier = crypto.createVerify("SHA256");
   // verifier.update(
   //   typeof payload === "object" ? JSON.stringify(payload) : payload,
   // );
   // verifier.end();
 
-  let isVerified = false;
+  let isVerified;
+  // console.log("Public Key for Verification:", publicKey);
   try {
+    // const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
+    //   modulusLength: 2048,
+    // });
+    // Using Hashing Algorithm
+    const algorithm = "RSA-SHA256";
+
+    // Converting string to buffer
+    let data = Buffer.from(payload);
+    console.log(algorithm);
+    console.log(data);
+    console.log("testdjhkj", signature);
+    // Sign the data and returned signature in buffer
+
+    const signatureqwe = crypto
+      .createHmac("sha256", signature)
+      .update(payload)
+      .digest("hex");
+
+    let testsignature = crypto.sign(
+      algorithm,
+      data,
+      signatureqwe.toString("base64"),
+    );
+
+    console.log("dsadas", testsignature);
+
+    let testsignature452 = crypto.sign(
+      algorithm,
+      data,
+      signature.toString("base64"),
+    );
+
+    console.log("dsadaseswer", testsignature452);
+    // Verifying signature using crypto.verify() function
+    console.log(algorithm);
+    console.log(data);
+    console.log(publicKey);
+    let isVerified = crypto.verify(algorithm, data, publicKey, signature);
+
+    // Printing the result
+    console.log(`Is signature verified: ${isVerified}`);
+    // var signer = crypto.createSign("sha256");
+    // signer.update(payload);
+    // //var sign = signer.sign(signature, "base64");
+
+    // var verifier = crypto.createVerify("sha256");
+    // verifier.update(sign);
+    // var ver = verifier.verify(publicKey, sign, "base64");
+    // console.log("testr", ver); //<--- always false!
+    // const verify = crypto.createVerify("RSA-SHA256");
+    // verify.update(payload);
+    // console.log(verify.verify(publicKey, signature, "base64"));
+    // const verify = crypto.createVerify("RSA-SHA256");
+    // verify.update(JSON.stringify(payload));
+    // isVerified = verify.verify(
+    //   {
+    //     key: publicKey,
+    //     padding: crypto.constants.RSA_PKCS1_PADDING, // Required for PKCS#1 v1.5
+    //   },
+    //   signature,
+    //   "base64",
+    // );
+    console.log("Verification result:123", isVerified);
+    // isVerified = crypto.verify(
+    //   "sha256",
+    //   Buffer.from(payload),
+    //   { key: publicKey, padding: crypto.constants.RSA_PKCS1_PADDING },
+    //   Buffer.from(signature, "base64"),
+    // );
+    // console.log("Verification result:123", isVerified);
     // isVerified = verifier.verify(
     //   {
     //     key: publicKey,
@@ -445,11 +520,12 @@ const loginBiometrics = async (req, res, next) => {
     //   signature,
     //   "base64",
     // );
-    console.log("Public Key for Verification:", publicKey);
-    console.log("Public Key for signature:", signature);
+    // console.log("Verification result:4656", isVerified);
+    // console.log("Public Key for Verification:", publicKey);
+    // console.log("Public Key for signature:", signature);
 
-    isVerified = verifier.verify(publicKey, signature, "base64");
-    console.log("Verification result:", isVerified);
+    // //isVerified = verifier.verify(publicKey, signature, "base64");
+    // console.log("Verification result:7887987", isVerified);
   } catch (err) {
     return res.status(401).json({ message: "Invalid signature or payload." });
   }
