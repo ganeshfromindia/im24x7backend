@@ -379,18 +379,33 @@ const forgotPassword = async (req, res, next) => {
 
 const addPublicKey = async (req, res, next) => {
   const { publicKey, userName } = req.body;
-  const createdAppPK = await new Apppublickey({
-    publicKey,
-    userName,
-  });
-  try {
-    await createdAppPK.save();
-  } catch (err) {
-    const error = new HttpError(
-      "Could not add public key, please try again.",
-      500,
-    );
-    return next(error);
+  let userExists = await Apppublickey.findOne({ userName: userName });
+  if (userExists) {
+    userExists.publicKey = publicKey;
+    try {
+      await userExists.save();
+    } catch (err) {
+      const error = new HttpError(
+        "Could not update public key, please try again.",
+        500,
+      );
+      return next(error);
+    }
+  } else {
+    const createdAppPK = await new Apppublickey({
+      publicKey,
+      userName,
+    });
+
+    try {
+      await createdAppPK.save();
+    } catch (err) {
+      const error = new HttpError(
+        "Could not add public key, please try again.",
+        500,
+      );
+      return next(error);
+    }
   }
   res.status(201).json({
     message: "Public key added successfully.",
